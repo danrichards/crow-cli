@@ -1,0 +1,89 @@
+<?php
+
+namespace Crow\Listen;
+
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
+
+class CrowApiClient
+{
+    public function fetchNext(?int $appId = null, array $events = []): ?array
+    {
+        $response = $this->request()->get($this->url('/listener-events/next'), array_filter([
+            'app_id' => $appId,
+            'events' => $events ?: null,
+        ]));
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        $this->assertSuccessful($response);
+
+        return $response->json('data');
+    }
+
+    public function fetchEvent(string $event): array
+    {
+        $response = $this->request()->get($this->url('/listener-events/'.$event));
+        $this->assertSuccessful($response);
+
+        return $response->json('data') ?? [];
+    }
+
+    public function markRead(string $event): void
+    {
+        $response = $this->request()->patch($this->url('/listener-events/'.$event.'/read'));
+        $this->assertSuccessful($response);
+    }
+
+    public function registerListener(string $publicUrl, ?int $appId, array $events, string $secret): array
+    {
+        $response = $this->request()->post($this->url('/listeners'), array_filter([
+            'public_url' => $publicUrl,
+            'app_id' => $appId,
+            'events' => $events ?: null,
+            'secret' => $secret,
+        ]));
+
+        $this->assertSuccessful($response);
+
+        return $response->json('data') ?? [];
+    }
+
+    public function unregisterListener(int|string $listenerId): void
+    {
+        $response = $this->request()->delete($this->url('/listeners/'.$listenerId));
+        $this->assertSuccessful($response);
+    }
+
+    private function request()
+    {
+        $token = config('crow-listen.api_token');
+        if (! is_string($token) || trim($token) === '') {
+            throw new RuntimeException('CROW_API_TOKEN is not configured.');
+        }
+
+        return Http::acceptJson()->asJson()->withToken($token);
+    }
+
+    private function url(string $path): string
+    {
+        $base = rtrim((string) config('crow-listen.api_url'), '/');
+        if (! str_ends_with($base, '/api/v1')) {
+            $base .= '/api/v1';
+        }
+
+        return $base.$path;
+    }
+
+    private function assertSuccessful(Response $response): void
+    {
+        if ($response->successful()) {
+            return;
+        }
+
+        throw new RuntimeException('Crow API request failed with HTTP '.$response->status().': '.mb_substr($response->body(), 0, 500));
+    }
+}
