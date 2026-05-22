@@ -1,5 +1,5 @@
 {
-    "name": "crow/listen",
+    "name": "crowbot/listen",
     "description": "Artisan commands for reading and listening to Crow developer handoff events.",
     "type": "library",
     "license": "MIT",
