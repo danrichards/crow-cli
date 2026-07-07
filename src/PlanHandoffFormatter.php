@@ -53,6 +53,7 @@ class PlanHandoffFormatter
 
         $lines[] = '';
         $lines[] = 'Run `php artisan crow:plan <plan-id>` to fetch a handoff.';
+        $lines[] = 'View plans on the web: '.$this->plansWebUrl();
 
         return implode("\n", $lines);
     }
@@ -121,5 +122,16 @@ class PlanHandoffFormatter
             3 => 'rd',
             default => 'th',
         };
+    }
+
+    private function plansWebUrl(): string
+    {
+        $base = rtrim((string) config('crow-listen.api_url'), '/');
+
+        if (str_ends_with($base, '/api/v1')) {
+            $base = substr($base, 0, -7);
+        }
+
+        return $base.'/dashboard/implementation-plans';
     }
 }

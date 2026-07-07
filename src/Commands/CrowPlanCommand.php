@@ -62,6 +62,7 @@ class CrowPlanCommand extends Command
         $this->writePlanTable($plans);
 
         $this->line('Run `php artisan crow:plan <plan-id>` to fetch a handoff.');
+        $this->line('View plans on the web: '.$this->plansWebUrl());
 
         return self::SUCCESS;
     }
@@ -198,6 +199,17 @@ class CrowPlanCommand extends Command
             3 => 'rd',
             default => 'th',
         };
+    }
+
+    private function plansWebUrl(): string
+    {
+        $base = rtrim((string) config('crow-listen.api_url'), '/');
+
+        if (str_ends_with($base, '/api/v1')) {
+            $base = substr($base, 0, -7);
+        }
+
+        return $base.'/dashboard/implementation-plans';
     }
 
     private function writeMultiline(string $output, ?string $style = null): void

@@ -31,6 +31,7 @@ class CrowPlanCommandTest extends TestCase
         $this->artisan('crow:plan')
             ->expectsOutputToContain('01KW0CYD3J0MQATPN8VMR8EVNP')
             ->expectsOutputToContain('php artisan crow:plan <plan-id>')
+            ->expectsOutputToContain('View plans on the web: https://crow.test/dashboard/implementation-plans')
             ->assertExitCode(0);
 
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/implementation-plans/handoffs'));
@@ -59,6 +60,7 @@ class CrowPlanCommandTest extends TestCase
 
         $this->assertStringContainsString('| Plan ID | Date | Status | Type | Title |', $markdown);
         $this->assertStringContainsString('Jul 7th', $markdown);
+        $this->assertStringContainsString('View plans on the web: https://crow.test/dashboard/implementation-plans', $markdown);
         $this->assertLessThan(strpos($markdown, 'old_plan'), strpos($markdown, 'new_plan'));
     }
 
