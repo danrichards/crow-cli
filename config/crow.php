@@ -3,6 +3,8 @@
 return [
     'default_api_url' => 'https://crow.test/api/v1',
     'config_path' => env('CROW_CONFIG_PATH'),
+    'global_config_path' => env('CROW_GLOBAL_CONFIG_PATH'),
+    'project_path' => null,
 
     'api_url' => env('CROW_API_URL'),
     'api_token' => env('CROW_API_TOKEN'),

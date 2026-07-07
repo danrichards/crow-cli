@@ -33,26 +33,37 @@ The checked-in PHAR build is available at:
 
 ## Authentication
 
-Run the login command and paste a Crow API token:
+Run the login command:
 
 ```bash
 crow auth login
 ```
 
+The CLI prints the API-token page URL, attempts to open it in your browser, then prompts for the token. If your terminal supports clickable links, you can also open the printed URL directly.
+
 Credentials are stored at:
 
 ```text
-~/.crow/config.json
+<project>/.crow/config.json
 ```
 
-The config file is written with restrictive permissions where the platform supports it. Environment variables remain supported for automation and CI.
+When you run `crow auth login` from inside a project, the CLI writes credentials to that project's `.crow/config.json`. This lets different projects use different Crow accounts and API tokens. If no project root can be detected, credentials fall back to the global config at `~/.crow/config.json`.
+
+Use `--global` when you intentionally want shared credentials:
+
+```bash
+crow auth login --global
+```
+
+Config files are written with restrictive permissions where the platform supports it. Environment variables remain supported for automation and CI.
 
 Configuration precedence is:
 
 1. Explicit command options, such as `--api-token` or `--api-url`
 2. Environment variables
-3. `~/.crow/config.json`
-4. Built-in defaults
+3. The nearest project config discovered by walking upward from the current directory: `.crow/config.json`
+4. Global config: `~/.crow/config.json`
+5. Built-in defaults
 
 Supported environment variables:
 
@@ -67,6 +78,18 @@ CROW_LISTEN_SECRET=
 ```
 
 The current default API URL is `https://crow.test/api/v1`.
+
+For automation or headless environments, pass the token and skip browser launch:
+
+```bash
+crow auth login --api-token=your_token_here --no-browser
+```
+
+To point one command at a specific config file, set `CROW_CONFIG_PATH`:
+
+```bash
+CROW_CONFIG_PATH=/path/to/.crow/config.json crow plan
+```
 
 ## Commands
 

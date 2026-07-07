@@ -194,6 +194,67 @@ class PlanCommandTest extends TestCase
             && $request->hasHeader('Authorization', 'Bearer env-token'));
     }
 
+    public function test_nearest_project_config_overrides_global_config(): void
+    {
+        config()->set('crow.config_path', null);
+
+        $project = $this->makeTempDirectory('project-config');
+        mkdir($project.'/.crow');
+        mkdir($project.'/packages');
+        mkdir($project.'/packages/client');
+        touch($project.'/composer.json');
+        file_put_contents($project.'/.crow/config.json', json_encode([
+            'api_url' => 'https://project.test/api/v1',
+            'api_token' => 'project-token',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
+
+        $this->writeGlobalCrowConfig([
+            'api_url' => 'https://global.test/api/v1',
+            'api_token' => 'global-token',
+        ]);
+
+        config()->set('crow.project_path', $project.'/packages/client');
+
+        Http::fake([
+            'https://project.test/api/v1/implementation-plans/handoffs' => Http::response([
+                'data' => ['plans' => []],
+            ]),
+        ]);
+
+        $this->artisan('plan')->assertExitCode(0);
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://project.test/api/v1/implementation-plans/handoffs'
+            && $request->hasHeader('Authorization', 'Bearer project-token'));
+    }
+
+    public function test_env_config_overrides_project_config(): void
+    {
+        config()->set('crow.config_path', null);
+        config()->set('crow.api_url', 'https://env.test/api/v1');
+        config()->set('crow.api_token', 'env-token');
+
+        $project = $this->makeTempDirectory('env-over-project');
+        mkdir($project.'/.crow');
+        touch($project.'/composer.json');
+        file_put_contents($project.'/.crow/config.json', json_encode([
+            'api_url' => 'https://project.test/api/v1',
+            'api_token' => 'project-token',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
+
+        config()->set('crow.project_path', $project);
+
+        Http::fake([
+            'https://env.test/api/v1/implementation-plans/handoffs' => Http::response([
+                'data' => ['plans' => []],
+            ]),
+        ]);
+
+        $this->artisan('plan')->assertExitCode(0);
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://env.test/api/v1/implementation-plans/handoffs'
+            && $request->hasHeader('Authorization', 'Bearer env-token'));
+    }
+
     public function test_explicit_options_override_env_and_stored_credentials(): void
     {
         $this->writeCrowConfig([
