@@ -72,7 +72,7 @@ class CrowApiClient
     {
         $token = config('crow-listen.api_token');
         if (! is_string($token) || trim($token) === '') {
-            throw new RuntimeException('CROW_API_TOKEN is not configured.');
+            throw new RuntimeException($this->missingTokenMessage());
         }
 
         return Http::acceptJson()->asJson()->withToken($token);
@@ -80,12 +80,40 @@ class CrowApiClient
 
     private function url(string $path): string
     {
+        return $this->apiBaseUrl().$path;
+    }
+
+    private function apiBaseUrl(): string
+    {
         $base = rtrim((string) config('crow-listen.api_url'), '/');
         if (! str_ends_with($base, '/api/v1')) {
             $base .= '/api/v1';
         }
 
-        return $base.$path;
+        return $base;
+    }
+
+    private function appBaseUrl(): string
+    {
+        return preg_replace('#/api/v1$#', '', $this->apiBaseUrl()) ?: $this->apiBaseUrl();
+    }
+
+    private function missingTokenMessage(): string
+    {
+        return implode(PHP_EOL, [
+            'CROW_API_TOKEN is not configured.',
+            '',
+            'Create a Crow API token:',
+            '  '.$this->appBaseUrl().'/dashboard/api-tokens',
+            '',
+            'Then add it to your local .env:',
+            '  CROW_API_TOKEN=your_token_here',
+            '',
+            'Optional if you are not using the default Crow URL:',
+            '  CROW_API_URL='.$this->apiBaseUrl(),
+            '',
+            'Re-run the command after saving the token.',
+        ]);
     }
 
     private function assertSuccessful(Response $response): void

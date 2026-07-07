@@ -22,7 +22,7 @@ class CrowPlanCommand extends Command
         try {
             $handoff = $client->fetchPlanHandoff((string) $this->argument('plan'), $this->appId());
         } catch (Throwable $exception) {
-            $this->error($exception->getMessage());
+            $this->writeMultiline($exception->getMessage(), 'error');
 
             return self::FAILURE;
         }
@@ -44,7 +44,7 @@ class CrowPlanCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->line($output);
+        $this->writeMultiline($output);
 
         return self::SUCCESS;
     }
@@ -54,5 +54,18 @@ class CrowPlanCommand extends Command
         $value = $this->option('app-id') ?: config('crow-listen.app_id');
 
         return is_numeric($value) ? (int) $value : null;
+    }
+
+    private function writeMultiline(string $output, ?string $style = null): void
+    {
+        foreach (preg_split('/\R/', $output) ?: [] as $line) {
+            if ($line === '') {
+                $this->newLine();
+
+                continue;
+            }
+
+            $this->line($line, $style);
+        }
     }
 }

@@ -12,7 +12,7 @@ class CrowPlanCommandTest extends TestCase
         config()->set('crow-listen.api_token', 'token');
 
         Http::fake([
-            'crow.test/api/v1/implementation-plans/plan_123/handoff*' => Http::response([
+            'https://crow.test/api/v1/implementation-plans/plan_123/handoff*' => Http::response([
                 'data' => [
                     'command' => 'php artisan crow:plan plan_123 --app-id=456',
                     'plan' => [
@@ -41,7 +41,7 @@ class CrowPlanCommandTest extends TestCase
         config()->set('crow-listen.api_token', 'token');
 
         Http::fake([
-            'crow.test/api/v1/implementation-plans/plan_123/handoff*' => Http::response([
+            'https://crow.test/api/v1/implementation-plans/plan_123/handoff*' => Http::response([
                 'data' => [
                     'plan' => ['title' => 'Slack integration'],
                     'markdown' => '# Markdown',
@@ -61,11 +61,23 @@ class CrowPlanCommandTest extends TestCase
         config()->set('crow-listen.api_token', 'token');
 
         Http::fake([
-            'crow.test/api/v1/implementation-plans/missing/handoff*' => Http::response(['message' => 'Not found'], 404),
+            'https://crow.test/api/v1/implementation-plans/missing/handoff*' => Http::response(['message' => 'Not found'], 404),
         ]);
 
         $this->artisan('crow:plan missing')
             ->expectsOutputToContain('Crow API request failed with HTTP 404')
+            ->assertExitCode(1);
+    }
+
+    public function test_plan_without_api_token_prints_setup_instructions(): void
+    {
+        config()->set('crow-listen.api_url', 'https://crow.test/api/v1');
+        config()->set('crow-listen.api_token', '');
+
+        $this->artisan('crow:plan plan_123')
+            ->expectsOutputToContain('CROW_API_TOKEN is not configured.')
+            ->expectsOutputToContain('https://crow.test/dashboard/api-tokens')
+            ->expectsOutputToContain('CROW_API_TOKEN=your_token_here')
             ->assertExitCode(1);
     }
 }
