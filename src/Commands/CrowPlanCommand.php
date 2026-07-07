@@ -90,18 +90,25 @@ class CrowPlanCommand extends Command
     {
         $plans = $payload['plans'] ?? [];
 
-        return is_array($plans) ? $plans : [];
+        if (! is_array($plans)) {
+            return [];
+        }
+
+        usort($plans, fn (array $first, array $second): int => $this->planTimestamp($second) <=> $this->planTimestamp($first));
+
+        return $plans;
     }
 
     private function writePlanTable(array $plans): void
     {
         $rows = array_map(fn (array $plan): array => [
             (string) ($plan['plan_id'] ?? $plan['slug'] ?? ''),
+            $this->planDate($plan),
             (string) ($plan['status_label'] ?? $plan['status'] ?? ''),
             (string) ($plan['title'] ?? 'Untitled plan'),
         ], $plans);
 
-        $headers = ['Plan ID', 'Status', 'Title'];
+        $headers = ['Plan ID', 'Date', 'Status', 'Title'];
         $widths = $this->columnWidths($headers, $rows);
         $separator = $this->tableSeparator($widths);
 
@@ -143,6 +150,54 @@ class CrowPlanCommand extends Command
     private function tableSeparator(array $widths): string
     {
         return '+'.implode('+', array_map(fn (int $width): string => str_repeat('-', $width + 2), $widths)).'+';
+    }
+
+    private function planDate(array $plan): string
+    {
+        $timestamp = $plan['updated_at'] ?? null;
+
+        if (! is_string($timestamp) || trim($timestamp) === '') {
+            return '';
+        }
+
+        try {
+            $date = new \DateTimeImmutable($timestamp);
+        } catch (Throwable) {
+            return '';
+        }
+
+        $day = (int) $date->format('j');
+
+        return $date->format('M').' '.$day.$this->ordinalSuffix($day);
+    }
+
+    private function planTimestamp(array $plan): int
+    {
+        $timestamp = $plan['updated_at'] ?? null;
+
+        if (! is_string($timestamp) || trim($timestamp) === '') {
+            return 0;
+        }
+
+        try {
+            return (new \DateTimeImmutable($timestamp))->getTimestamp();
+        } catch (Throwable) {
+            return 0;
+        }
+    }
+
+    private function ordinalSuffix(int $day): string
+    {
+        if ($day >= 11 && $day <= 13) {
+            return 'th';
+        }
+
+        return match ($day % 10) {
+            1 => 'st',
+            2 => 'nd',
+            3 => 'rd',
+            default => 'th',
+        };
     }
 
     private function writeMultiline(string $output, ?string $style = null): void

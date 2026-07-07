@@ -2,6 +2,7 @@
 
 namespace Crow\Listen\Tests;
 
+use Crow\Listen\PlanHandoffFormatter;
 use Illuminate\Support\Facades\Http;
 
 class CrowPlanCommandTest extends TestCase
@@ -33,6 +34,32 @@ class CrowPlanCommandTest extends TestCase
             ->assertExitCode(0);
 
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/implementation-plans/handoffs'));
+    }
+
+    public function test_plan_list_markdown_sorts_by_date_desc(): void
+    {
+        $markdown = (new PlanHandoffFormatter())->planListMarkdown([
+            'plans' => [
+                [
+                    'plan_id' => 'old_plan',
+                    'status_label' => 'Ready for review',
+                    'plan_type_label' => 'Feature',
+                    'title' => 'Older plan',
+                    'updated_at' => '2026-01-01T15:30:00+00:00',
+                ],
+                [
+                    'plan_id' => 'new_plan',
+                    'status_label' => 'Ready for build',
+                    'plan_type_label' => 'Bug',
+                    'title' => 'Newer plan',
+                    'updated_at' => '2026-07-07T15:30:00+00:00',
+                ],
+            ],
+        ]);
+
+        $this->assertStringContainsString('| Plan ID | Date | Status | Type | Title |', $markdown);
+        $this->assertStringContainsString('Jul 7th', $markdown);
+        $this->assertLessThan(strpos($markdown, 'old_plan'), strpos($markdown, 'new_plan'));
     }
 
     public function test_plan_without_argument_can_print_raw_json(): void

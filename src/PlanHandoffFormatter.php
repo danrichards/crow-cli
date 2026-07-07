@@ -37,17 +37,17 @@ class PlanHandoffFormatter
         }
 
         $lines = [
-            '| Plan ID | Status | Type | Title | Updated |',
+            '| Plan ID | Date | Status | Type | Title |',
             '| --- | --- | --- | --- | --- |',
         ];
 
         foreach ($plans as $plan) {
             $lines[] = '| '.implode(' | ', [
                 $this->tableCell((string) ($plan['plan_id'] ?? $plan['slug'] ?? '')),
+                $this->tableCell($this->planDate($plan)),
                 $this->tableCell((string) ($plan['status_label'] ?? $plan['status'] ?? '')),
                 $this->tableCell((string) ($plan['plan_type_label'] ?? $plan['plan_type'] ?? '')),
                 $this->tableCell((string) ($plan['title'] ?? 'Untitled plan')),
-                $this->tableCell((string) ($plan['updated_at'] ?? '')),
             ]).' |';
         }
 
@@ -66,6 +66,60 @@ class PlanHandoffFormatter
     {
         $plans = $payload['plans'] ?? [];
 
-        return is_array($plans) ? $plans : [];
+        if (! is_array($plans)) {
+            return [];
+        }
+
+        usort($plans, fn (array $first, array $second): int => $this->planTimestamp($second) <=> $this->planTimestamp($first));
+
+        return $plans;
+    }
+
+    private function planDate(array $plan): string
+    {
+        $timestamp = $plan['updated_at'] ?? null;
+
+        if (! is_string($timestamp) || trim($timestamp) === '') {
+            return '';
+        }
+
+        try {
+            $date = new \DateTimeImmutable($timestamp);
+        } catch (\Throwable) {
+            return '';
+        }
+
+        $day = (int) $date->format('j');
+
+        return $date->format('M').' '.$day.$this->ordinalSuffix($day);
+    }
+
+    private function planTimestamp(array $plan): int
+    {
+        $timestamp = $plan['updated_at'] ?? null;
+
+        if (! is_string($timestamp) || trim($timestamp) === '') {
+            return 0;
+        }
+
+        try {
+            return (new \DateTimeImmutable($timestamp))->getTimestamp();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function ordinalSuffix(int $day): string
+    {
+        if ($day >= 11 && $day <= 13) {
+            return 'th';
+        }
+
+        return match ($day % 10) {
+            1 => 'st',
+            2 => 'nd',
+            3 => 'rd',
+            default => 'th',
+        };
     }
 }
