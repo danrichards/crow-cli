@@ -3,6 +3,7 @@
 namespace Crow\Listen;
 
 use Crow\Listen\Commands\CrowListenCommand;
+use Crow\Listen\Commands\CrowPlanCommand;
 use Crow\Listen\Commands\CrowReadCommand;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +22,7 @@ class CrowListenServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                CrowPlanCommand::class,
                 CrowReadCommand::class,
                 CrowListenCommand::class,
             ]);

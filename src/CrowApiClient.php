@@ -32,6 +32,16 @@ class CrowApiClient
         return $response->json('data') ?? [];
     }
 
+    public function fetchPlanHandoff(string $slug, ?int $appId = null): array
+    {
+        $response = $this->request()->get($this->url('/implementation-plans/'.$slug.'/handoff'), array_filter([
+            'app_id' => $appId,
+        ]));
+        $this->assertSuccessful($response);
+
+        return $response->json('data') ?? [];
+    }
+
     public function markRead(string $event): void
     {
         $response = $this->request()->patch($this->url('/listener-events/'.$event.'/read'));

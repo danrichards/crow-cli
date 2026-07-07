@@ -1,0 +1,58 @@
+<?php
+
+namespace Crow\Listen\Commands;
+
+use Crow\Listen\CrowApiClient;
+use Crow\Listen\PlanHandoffFormatter;
+use Illuminate\Console\Command;
+use Throwable;
+
+class CrowPlanCommand extends Command
+{
+    protected $signature = 'crow:plan
+        {plan : Implementation plan slug}
+        {--app-id= : Crow app ID}
+        {--json : Print raw JSON instead of markdown}
+        {--output= : Write output to a file instead of stdout}';
+
+    protected $description = 'Fetch an AI-ready implementation plan handoff';
+
+    public function handle(CrowApiClient $client, PlanHandoffFormatter $formatter): int
+    {
+        try {
+            $handoff = $client->fetchPlanHandoff((string) $this->argument('plan'), $this->appId());
+        } catch (Throwable $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $output = $this->option('json')
+            ? $formatter->json($handoff)
+            : $formatter->markdown($handoff);
+
+        $path = $this->option('output');
+        if (is_string($path) && trim($path) !== '') {
+            if (file_put_contents($path, $output) === false) {
+                $this->error('Unable to write Crow plan handoff to '.$path);
+
+                return self::FAILURE;
+            }
+
+            $this->info('Wrote Crow plan handoff to '.$path);
+
+            return self::SUCCESS;
+        }
+
+        $this->line($output);
+
+        return self::SUCCESS;
+    }
+
+    private function appId(): ?int
+    {
+        $value = $this->option('app-id') ?: config('crow-listen.app_id');
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+}
