@@ -10,7 +10,7 @@ use Throwable;
 class CrowPlanCommand extends Command
 {
     protected $signature = 'crow:plan
-        {plan : Implementation plan slug}
+        {plan? : Implementation plan slug}
         {--json : Print raw JSON instead of markdown}
         {--output= : Write output to a file instead of stdout}';
 
@@ -19,7 +19,13 @@ class CrowPlanCommand extends Command
     public function handle(CrowApiClient $client, PlanHandoffFormatter $formatter): int
     {
         try {
-            $handoff = $client->fetchPlanHandoff((string) $this->argument('plan'));
+            $plan = $this->argument('plan');
+
+            if (! is_string($plan) || trim($plan) === '') {
+                return $this->handlePlanList($client, $formatter);
+            }
+
+            $handoff = $client->fetchPlanHandoff($plan);
         } catch (Throwable $exception) {
             $this->writeMultiline($exception->getMessage(), 'error');
 
@@ -30,15 +36,47 @@ class CrowPlanCommand extends Command
             ? $formatter->json($handoff)
             : $formatter->markdown($handoff);
 
+        return $this->writeOutput($output, 'Crow plan handoff');
+    }
+
+    private function handlePlanList(CrowApiClient $client, PlanHandoffFormatter $formatter): int
+    {
+        $payload = $client->fetchPlanHandoffs();
+
+        if ($this->option('json')) {
+            return $this->writeOutput($formatter->json($payload), 'Crow plan list');
+        }
+
+        if (is_string($this->option('output')) && trim((string) $this->option('output')) !== '') {
+            return $this->writeOutput($formatter->planListMarkdown($payload), 'Crow plan list');
+        }
+
+        $plans = $this->plans($payload);
+
+        if ($plans === []) {
+            $this->warn('No active implementation plans found.');
+
+            return self::SUCCESS;
+        }
+
+        $this->writePlanTable($plans);
+
+        $this->line('Run `php artisan crow:plan <plan-id>` to fetch a handoff.');
+
+        return self::SUCCESS;
+    }
+
+    private function writeOutput(string $output, string $label): int
+    {
         $path = $this->option('output');
         if (is_string($path) && trim($path) !== '') {
             if (file_put_contents($path, $output) === false) {
-                $this->error('Unable to write Crow plan handoff to '.$path);
+                $this->error('Unable to write '.$label.' to '.$path);
 
                 return self::FAILURE;
             }
 
-            $this->info('Wrote Crow plan handoff to '.$path);
+            $this->info('Wrote '.$label.' to '.$path);
 
             return self::SUCCESS;
         }
@@ -46,6 +84,65 @@ class CrowPlanCommand extends Command
         $this->writeMultiline($output);
 
         return self::SUCCESS;
+    }
+
+    private function plans(array $payload): array
+    {
+        $plans = $payload['plans'] ?? [];
+
+        return is_array($plans) ? $plans : [];
+    }
+
+    private function writePlanTable(array $plans): void
+    {
+        $rows = array_map(fn (array $plan): array => [
+            (string) ($plan['plan_id'] ?? $plan['slug'] ?? ''),
+            (string) ($plan['status_label'] ?? $plan['status'] ?? ''),
+            (string) ($plan['title'] ?? 'Untitled plan'),
+        ], $plans);
+
+        $headers = ['Plan ID', 'Status', 'Title'];
+        $widths = $this->columnWidths($headers, $rows);
+        $separator = $this->tableSeparator($widths);
+
+        $this->line($separator);
+        $this->line($this->tableRow($headers, $widths));
+        $this->line($separator);
+
+        foreach ($rows as $row) {
+            $this->line($this->tableRow($row, $widths));
+        }
+
+        $this->line($separator);
+    }
+
+    private function columnWidths(array $headers, array $rows): array
+    {
+        $widths = array_map('strlen', $headers);
+
+        foreach ($rows as $row) {
+            foreach ($row as $index => $value) {
+                $widths[$index] = max($widths[$index] ?? 0, strlen($value));
+            }
+        }
+
+        return $widths;
+    }
+
+    private function tableRow(array $columns, array $widths): string
+    {
+        $cells = [];
+
+        foreach ($columns as $index => $column) {
+            $cells[] = str_pad($column, $widths[$index] ?? strlen($column));
+        }
+
+        return '| '.implode(' | ', $cells).' |';
+    }
+
+    private function tableSeparator(array $widths): string
+    {
+        return '+'.implode('+', array_map(fn (int $width): string => str_repeat('-', $width + 2), $widths)).'+';
     }
 
     private function writeMultiline(string $output, ?string $style = null): void

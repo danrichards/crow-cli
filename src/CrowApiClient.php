@@ -40,6 +40,14 @@ class CrowApiClient
         return $response->json('data') ?? [];
     }
 
+    public function fetchPlanHandoffs(): array
+    {
+        $response = $this->request()->get($this->url('/implementation-plans/handoffs'));
+        $this->assertSuccessful($response);
+
+        return $response->json('data') ?? ['plans' => []];
+    }
+
     public function markRead(string $event): void
     {
         $response = $this->request()->patch($this->url('/listener-events/'.$event.'/read'));
