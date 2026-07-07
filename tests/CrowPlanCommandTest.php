@@ -14,7 +14,7 @@ class CrowPlanCommandTest extends TestCase
         Http::fake([
             'https://crow.test/api/v1/implementation-plans/plan_123/handoff*' => Http::response([
                 'data' => [
-                    'command' => 'php artisan crow:plan plan_123 --app-id=456',
+                    'command' => 'php artisan crow:plan plan_123',
                     'plan' => [
                         'title' => 'Slack integration',
                         'current_version' => [
@@ -26,13 +26,13 @@ class CrowPlanCommandTest extends TestCase
             ]),
         ]);
 
-        $this->artisan('crow:plan plan_123 --app-id=456')
+        $this->artisan('crow:plan plan_123')
             ->expectsOutputToContain('Crow Plan Handoff: Slack integration')
             ->expectsOutputToContain('Generated Plan')
             ->assertExitCode(0);
 
         Http::assertSent(fn ($request): bool => str_contains($request->url(), '/implementation-plans/plan_123/handoff')
-            && str_contains($request->url(), 'app_id=456'));
+            && ! str_contains($request->url(), 'app_id='));
     }
 
     public function test_plan_can_print_raw_json(): void

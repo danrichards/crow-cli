@@ -11,7 +11,6 @@ class CrowPlanCommand extends Command
 {
     protected $signature = 'crow:plan
         {plan : Implementation plan slug}
-        {--app-id= : Crow app ID}
         {--json : Print raw JSON instead of markdown}
         {--output= : Write output to a file instead of stdout}';
 
@@ -20,7 +19,7 @@ class CrowPlanCommand extends Command
     public function handle(CrowApiClient $client, PlanHandoffFormatter $formatter): int
     {
         try {
-            $handoff = $client->fetchPlanHandoff((string) $this->argument('plan'), $this->appId());
+            $handoff = $client->fetchPlanHandoff((string) $this->argument('plan'));
         } catch (Throwable $exception) {
             $this->writeMultiline($exception->getMessage(), 'error');
 
@@ -47,13 +46,6 @@ class CrowPlanCommand extends Command
         $this->writeMultiline($output);
 
         return self::SUCCESS;
-    }
-
-    private function appId(): ?int
-    {
-        $value = $this->option('app-id') ?: config('crow-listen.app_id');
-
-        return is_numeric($value) ? (int) $value : null;
     }
 
     private function writeMultiline(string $output, ?string $style = null): void
