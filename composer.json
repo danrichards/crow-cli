@@ -1,34 +1,39 @@
 {
-    "name": "crowbot/listen",
-    "description": "Artisan commands for reading and listening to Crow developer handoff events.",
-    "type": "library",
+    "name": "crowbot/cli",
+    "description": "Standalone Crow CLI for reading events, listening for handoffs, and fetching implementation plans.",
+    "type": "project",
     "license": "MIT",
+    "bin": [
+        "builds/crow"
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "illuminate/http": "^12.17",
+        "laravel-zero/framework": "^12.1",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^11.0"
+    },
     "autoload": {
         "psr-4": {
-            "Crow\\Listen\\": "src/"
+            "App\\": "app/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Crow\\Listen\\Tests\\": "tests/"
+            "Tests\\": "tests/"
         }
     },
-    "require": {
-        "php": "^8.2",
-        "illuminate/console": "^10.0|^11.0|^12.0",
-        "illuminate/http": "^10.0|^11.0|^12.0",
-        "illuminate/support": "^10.0|^11.0|^12.0"
+    "scripts": {
+        "test": "phpunit"
     },
-    "require-dev": {
-        "orchestra/testbench": "^8.0|^9.0|^10.0",
-        "phpunit/phpunit": "^10.0|^11.0"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Crow\\Listen\\CrowListenServiceProvider"
-            ]
-        }
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "optimize-autoloader": true
     },
     "minimum-stability": "stable",
     "prefer-stable": true
